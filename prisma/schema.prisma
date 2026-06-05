@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WalletStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum TransactionType {
+  FUNDING
+  TRANSFER
+  REVERSAL
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id          String    @id @default(uuid())
+  name        String
+  email       String    @unique
+  password    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  wallet      Wallet?
+}
+
+model Wallet {
+  id          String       @id @default(uuid())
+  userId      String       @unique
+  balance     Decimal      @default(0.00) @db.Decimal(18,2)
+  currency    String       @default("NGN")
+  status      WalletStatus @default(ACTIVE)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id])
+
+  transactions Transaction[]
+  ledgerEntries LedgerEntry[]
+}
+
+model Transaction {
+  id            String             @id @default(uuid())
+  reference     String             @unique
+  walletId       String
+  amount        Decimal            @db.Decimal(18,2)
+  type          TransactionType
+  status        TransactionStatus  @default(PENDING)
+  description   String?
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  wallet        Wallet             @relation(fields: [walletId], references: [id])
+
+  ledgerEntries LedgerEntry[]
+}
+
+model LedgerEntry {
+  id              String       @id @default(uuid())
+  transactionId   String
+  walletId         String
+
+  debit           Decimal      @default(0.00) @db.Decimal(18,2)
+  credit          Decimal      @default(0.00) @db.Decimal(18,2)
+
+  balanceAfter    Decimal      @db.Decimal(18,2)
+
+  createdAt       DateTime     @default(now())
+
+  transaction     Transaction  @relation(fields: [transactionId], references: [id])
+  wallet          Wallet       @relation(fields: [walletId], references: [id])
+}
