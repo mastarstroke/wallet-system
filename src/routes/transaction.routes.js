@@ -6,20 +6,20 @@ const auth = require(
     "../middleware/auth.middleware"
 );
 
-const walletController = require(
-    "../controllers/wallet.controller"
+const transactionController = require(
+    "../controllers/transaction.controller"
 );
 
 router.get(
     "/",
     auth,
-    walletController.getBalance
+    transactionController.index
 );
 
-router.post(
-    "/fund",
+router.get(
+    "/:reference",
     auth,
-    walletController.fundWallet
+    transactionController.show
 );
 
 module.exports = router;

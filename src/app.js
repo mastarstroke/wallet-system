@@ -3,6 +3,7 @@ const app = express();
 
 const authRoutes = require("./routes/auth.routes");
 const walletRoutes = require("./routes/wallet.routes");
+const transactionRoutes = require("./routes/transaction.routes");
 
 
 app.use(express.json());
@@ -13,6 +14,7 @@ app.get('/', (req, res) => {
     });
 });
 
+app.use("/api/transactions", transactionRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
 
