@@ -25,6 +25,12 @@ enum TransactionStatus {
   FAILED
 }
 
+enum TransferStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 model User {
   id          String    @id @default(uuid())
   name        String
@@ -50,6 +56,9 @@ model Wallet {
 
   transactions Transaction[]
   ledgerEntries LedgerEntry[]
+
+  sentTransfers     Transfer[] @relation("SenderTransfers")
+  receivedTransfers Transfer[] @relation("ReceiverTransfers")
 }
 
 model Transaction {
@@ -83,4 +92,21 @@ model LedgerEntry {
 
   transaction     Transaction  @relation(fields: [transactionId], references: [id])
   wallet          Wallet       @relation(fields: [walletId], references: [id])
+}
+
+model Transfer {
+  id               String           @id @default(uuid())
+  reference        String           @unique
+
+  senderWalletId   String
+  receiverWalletId String
+
+  amount           Decimal          @db.Decimal(18,2)
+
+  status           TransferStatus   @default(PENDING)
+
+  createdAt        DateTime         @default(now())
+
+  senderWallet     Wallet @relation("SenderTransfers", fields: [senderWalletId], references: [id])
+  receiverWallet   Wallet @relation("ReceiverTransfers", fields: [receiverWalletId], references: [id])
 }
