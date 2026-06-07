@@ -30,3 +30,31 @@ exports.transfer = async (
 
     }
 };
+
+exports.reverse = async (
+    req,
+    res
+) => {
+
+    try {
+
+        const transfer =
+            await transferService.reverseTransfer(
+                req.params.reference
+            );
+
+        return res.json({
+            success: true,
+            data: transfer
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error.message
+        });
+
+    }
+};

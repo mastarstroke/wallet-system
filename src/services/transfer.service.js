@@ -239,6 +239,179 @@ const transferAmount = new Prisma.Decimal(amount);
     }
 };
 
+
+const reverseTransfer = async (
+    transferReference
+) => {
+
+    return await prisma.$transaction(
+        async (tx) => {
+            const transfer =
+                await tx.transfer.findUnique({
+                    where: {
+                        reference: transferReference
+                    }
+                });
+
+            if (!transfer) {
+                throw new Error(
+                    "Transfer not found"
+                );
+            }
+
+            if (transfer.reversed) {
+                throw new Error(
+                    "Transfer already reversed"
+                );
+            }
+
+            const walletIds = [
+                transfer.senderWalletId,
+                transfer.receiverWalletId
+            ].sort();
+
+            await tx.$queryRaw`
+                SELECT id
+                FROM "Wallet"
+                WHERE id IN (
+                    ${walletIds[0]},
+                    ${walletIds[1]}
+                )
+                FOR UPDATE
+            `;
+
+            const senderWallet =
+                await tx.wallet.findUnique({
+                    where: {
+                        id:
+                            transfer.senderWalletId
+                    }
+                });
+
+            const receiverWallet =
+                await tx.wallet.findUnique({
+                    where: {
+                        id:
+                            transfer.receiverWalletId
+                    }
+                });
+
+            if (
+                receiverWallet.balance.lt(
+                    transfer.amount
+                )
+            ) {
+                throw new Error(
+                    "Receiver has insufficient balance for reversal"
+                );
+            }
+
+            const reversalReference =
+                `REV-${uuid()}`;
+
+            const reversalTransfer =
+                await tx.transfer.create({
+                    data: {
+                        reference: reversalReference,
+                        senderWalletId: receiverWallet.id,
+                        receiverWalletId: senderWallet.id,
+                        amount: transfer.amount,
+                        status: "SUCCESS"
+                    }
+                });
+
+            await tx.wallet.update({
+                where: {
+                    id: receiverWallet.id
+                },
+                data: {
+                    balance: {
+                        decrement: transfer.amount
+                    }
+                }
+            });
+
+            await tx.wallet.update({
+                where: {
+                    id: senderWallet.id
+                },
+                data: {
+                    balance: {
+                        increment: transfer.amount
+                    }
+                }
+            });
+
+            const debitTransaction =
+                await tx.transaction.create({
+                    data: {
+                        reference: `REV-DEBIT-${uuid()}`,
+                        walletId: receiverWallet.id,
+                        amount: transfer.amount,
+                        type: "REVERSAL",
+                        status: "SUCCESS",
+                        description: `Reversal debit`
+                    }
+                });
+
+            const creditTransaction =
+                await tx.transaction.create({
+                    data: {
+                        reference: `REV-CREDIT-${uuid()}`,
+                        walletId: senderWallet.id,
+                        amount: transfer.amount,
+                        type: "REVERSAL",
+                        status: "SUCCESS",
+                        description: `Reversal credit`
+                    }
+                });
+
+            await tx.ledgerEntry.create({
+                data: {
+                    transactionId: debitTransaction.id,
+                    walletId: receiverWallet.id,
+                    debit: transfer.amount,
+                    credit: 0,
+                    balanceAfter: receiverWallet.balance.minus(
+                            transfer.amount
+                        )
+                }
+            });
+
+            await tx.ledgerEntry.create({
+                data: {
+                    transactionId: creditTransaction.id,
+                    walletId: senderWallet.id,
+                    debit: 0,
+                    credit: transfer.amount,
+                    balanceAfter: senderWallet.balance.plus(
+                            transfer.amount
+                        )
+                }
+            });
+
+            await tx.transfer.update({
+                where: {
+                    id: transfer.id
+                },
+                data: {
+                    reversed: true,
+                    reversedAt: new Date(),
+                    reversalReference
+                }
+            });
+
+            return reversalTransfer;
+        },
+
+        {
+            isolationLevel:
+                Prisma.TransactionIsolationLevel.Serializable
+        }
+    );
+};
+
 module.exports = {
-    transferFunds
+    transferFunds,
+    reverseTransfer
 };

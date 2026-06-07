@@ -105,6 +105,12 @@ model Transfer {
 
   status           TransferStatus   @default(PENDING)
 
+  reversed         Boolean @default(false)
+
+  reversedAt       DateTime?
+
+  reversalReference String?
+
   createdAt        DateTime         @default(now())
 
   senderWallet     Wallet @relation("SenderTransfers", fields: [senderWalletId], references: [id])

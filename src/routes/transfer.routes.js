@@ -17,4 +17,10 @@ router.post(
     transferController.transfer
 );
 
+router.post(
+    "/:reference/reverse",
+    auth,
+    transferController.reverse
+);
+
 module.exports = router;
