@@ -4,6 +4,10 @@ const { v4: uuid } = require("uuid");
 
 const MAX_RETRIES = 3;
 
+const {
+    createAuditLog
+} = require("./audit.service");
+
 const transferFunds = async (
     senderUserId,
     receiverEmail,
@@ -194,6 +198,20 @@ const transferAmount = new Prisma.Decimal(amount);
                             debit: new Prisma.Decimal(0),
                             credit: transferAmount,
                             balanceAfter: receiverBalanceAfter
+                        }
+                    });
+
+                    // AUDIT LOG
+                    await createAuditLog({
+                        userId: senderUserId,
+                        action: "TRANSFER",
+                        entityType: "TRANSFER",
+                        entityId: transfer.id,
+                        description: `Transferred ₦${amount} to ${receiverEmail}`,
+                        metadata: {
+                            amount,
+                            receiverEmail,
+                            transferReference: transfer.reference
                         }
                     });
 
@@ -398,6 +416,18 @@ const reverseTransfer = async (
                     reversed: true,
                     reversedAt: new Date(),
                     reversalReference
+                }
+            });
+
+            await createAuditLog({
+                userId: null,
+                action: "REVERSAL",
+                entityType: "TRANSFER",
+                entityId: reversalTransfer.id,
+                description: `Reversed transfer ${transfer.reference}`,
+                metadata: {
+                    originalTransfer: transfer.reference,
+                    reversalReference: reversalTransfer.reference
                 }
             });
 

@@ -1,6 +1,10 @@
 const bcrypt = require("bcrypt");
 const prisma = require("../config/prisma");
 
+const {
+    createAuditLog
+} = require("./audit.service");
+
 const register = async (data) => {
 
   const existingUser = await prisma.user.findUnique({
@@ -33,6 +37,15 @@ const register = async (data) => {
     }
   });
 
+  // Audit log
+  await createAuditLog({
+    userId: user.id,
+    action: "REGISTER",
+    entityType: "USER",
+    entityId: user.id,
+    description: "User registered account"
+  });
+
   return user;
 };
 
@@ -56,6 +69,15 @@ const login = async (email, password) => {
   if (!validPassword) {
     throw new Error("Invalid credentials");
   }
+
+  // Audit log
+  await createAuditLog({
+      userId: user.id,
+      action: "LOGIN",
+      entityType: "USER",
+      entityId: user.id,
+      description: "User logged in"
+  });
 
   return user;
 };

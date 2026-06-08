@@ -31,6 +31,15 @@ enum TransferStatus {
   FAILED
 }
 
+enum AuditAction {
+  REGISTER
+  LOGIN
+  FUND_WALLET
+  TRANSFER
+  REVERSAL
+  UPDATE_PROFILE
+}
+
 model User {
   id          String    @id @default(uuid())
   name        String
@@ -40,6 +49,7 @@ model User {
   updatedAt   DateTime  @updatedAt
 
   wallet      Wallet?
+  auditLogs   AuditLog[]
 }
 
 model Wallet {
@@ -115,4 +125,23 @@ model Transfer {
 
   senderWallet     Wallet @relation("SenderTransfers", fields: [senderWalletId], references: [id])
   receiverWallet   Wallet @relation("ReceiverTransfers", fields: [receiverWalletId], references: [id])
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+
+  userId      String?
+
+  action      AuditAction
+
+  entityType  String
+  entityId    String?
+
+  description String
+
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  user        User? @relation(fields: [userId], references: [id])
 }

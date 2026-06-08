@@ -5,6 +5,7 @@ const authRoutes = require("./routes/auth.routes");
 const walletRoutes = require("./routes/wallet.routes");
 const transactionRoutes = require("./routes/transaction.routes");
 const transferRoutes =require("./routes/transfer.routes");
+const auditRoutes = require("./routes/audit.routes");
 
 
 app.use(express.json());
@@ -19,4 +20,5 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/transfer", transferRoutes);
+app.use("/api/audit-logs", auditRoutes);
 module.exports = app;

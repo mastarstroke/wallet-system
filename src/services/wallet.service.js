@@ -1,5 +1,9 @@
 const prisma = require("../config/prisma");
 
+const {
+    createAuditLog
+} = require("./audit.service");
+
 const getWallet = async (userId) => {
 
     const wallet = await prisma.wallet.findUnique({
@@ -66,6 +70,18 @@ const fundWallet = async (
                     debit: 0,
                     credit: amount,
                     balanceAfter
+                }
+            });
+
+            // Audit log
+            await createAuditLog({
+                userId,
+                action: "FUND_WALLET",
+                entityType: "TRANSACTION",
+                entityId: transaction.id,
+                description: `Funded wallet with ₦${amount}`,
+                metadata: {
+                    amount
                 }
             });
 
